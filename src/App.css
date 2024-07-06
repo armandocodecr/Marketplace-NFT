@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body { 
+    background-color: #FDFBF6;
+}
+
+.nav-active {
+    color: rgb(48, 106, 231);
+    transition: all .3s ease-out;
+}
