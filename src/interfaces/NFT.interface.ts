@@ -7,8 +7,19 @@ export interface NFTItems {
         type: "BigNumber";
         hex: string;
     };
+    ethReceived?: {
+        type: "BigNumber";
+        hex: string;
+    };
     seller: string;
     name: string;
     description: string;
     image: string;
+}
+
+export interface NFTListItems {
+    homeItems: NFTItems[],
+    listedItems: NFTItems[],
+    soldItems: NFTItems[],
+    purchasesItems: NFTItems[],
 }

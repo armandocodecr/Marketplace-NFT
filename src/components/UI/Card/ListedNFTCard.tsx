@@ -3,10 +3,9 @@ import { convertWeiToEther } from "../../../lib/utils";
 
 interface Props {
   item: NFTItems;
-  buyMarketItem: (item: NFTItems) => Promise<void>
 }
 
-export function Card({ item, buyMarketItem }: Props) {
+export function ListedNFTCard({ item }: Props) {
   return (
     <article className="card w-64 h-auto" key={item.image.split("/")[4]}>
       <div className="card2 w-full h-auto flex flex-col justify-start items-start">
@@ -25,12 +24,6 @@ export function Card({ item, buyMarketItem }: Props) {
               {`${convertWeiToEther(item.totalPrice.toString())} ETH`}
             </p>
           </div>
-          <button 
-            className="w-full flex mt-3 justify-center items-center bg-[#FCD535] text-black py-1 font-medium rounded-lg transition-all ease-in hover:bg-[#fcd435d3]"
-            onClick={() => buyMarketItem(item)}
-          >
-            BUY NFT
-          </button>
         </div>
       </div>
     </article>

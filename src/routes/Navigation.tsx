@@ -34,7 +34,7 @@ export const Navigation = () => {
                         </ul>
                         {
                             address ? (
-                                <p className='py-1 px-4 rounded-lg border border-[rgba(102,102,102,0.49)]'>{truncateText(address?.toString() || "", 8)}</p>
+                                <p className='py-1 px-4 rounded-lg border border-[#FCD535]'>{truncateText(address?.toString() || "", 8)}</p>
                             )
                             : (
                                 <button 

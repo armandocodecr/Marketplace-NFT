@@ -86,7 +86,7 @@ export function Create() {
         </div>
       ) : (
         <section className="flex flex-col justify-center items-center">
-          <h1 className="text-3xl text-white font-bold self-start">CREATE YOUR NFT</h1>
+          <h1 className="text-3xl text-[#FCD535] font-bold self-start">CREATE YOUR NFT</h1>
           <form
             className="w-full flex justify-start items-start flex-col"
             onSubmit={handleSubmit(onSubmit)}
