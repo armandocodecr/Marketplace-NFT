@@ -1,13 +1,14 @@
 import { useContext, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { ContractsContext } from "../context/Contracts";
+import axios from "axios";
+import { NFTItems } from "../interfaces/NFT.interface";
 
 export function useMarketplace() {
   const { marketPlaceContract, nftContract, provider } = useContext(ContractsContext);
   const { isConnected } = useAccount();
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([]);
-
+  const [items, setItems] = useState<NFTItems[]>([]);
   const loadMarketplaceItem = async () => {
     if (isConnected && provider && marketPlaceContract && nftContract) {
       try {
@@ -16,8 +17,16 @@ export function useMarketplace() {
         for (let i = 1; i <= +itemAcount.toString(); i++) {
           const item = await marketPlaceContract.items(i);
           if (!item.sold) {
-            const uri = await nftContract.tokenURI(item.tokenId);
-            const response = await fetch(uri).then((res) => res.json());
+            const cid = await nftContract.tokenURI(item.tokenId);
+            const response = await axios.get('https://api.pinata.cloud/data/pinList', {
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT}`
+              },
+              params: {
+                cid
+              }
+            }).then(res => res.data.rows[0]);
+            const { metadata } = response
             const totalPrice = await marketPlaceContract.getTotalPrice(
               item.itemId
             );
@@ -25,9 +34,9 @@ export function useMarketplace() {
               totalPrice,
               itemId: item.itemId,
               seller: item.seller,
-              name: response.name,
-              description: response.description,
-              image: response.image,
+              name: metadata.name,
+              description: metadata.keyvalues.description,
+              image: `https://gateway.pinata.cloud/ipfs/${cid}`,
             });
           }
         }

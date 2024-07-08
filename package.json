@@ -21,7 +21,9 @@
     "ipfs-http-client": "^60.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.52.1",
     "react-router-dom": "^6.23.1",
+    "sonner": "^1.5.0",
     "viem": "^2.13.6",
     "wagmi": "^2.9.8",
     "web3": "^4.9.0"

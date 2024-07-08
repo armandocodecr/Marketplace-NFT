@@ -1,54 +1,48 @@
-import { ChangeEvent, useContext, useState } from "react";
+import { useContext } from "react";
+import axios from "axios";
+import { toast } from "sonner";
 import { ethers } from "ethers";
 import { useAccount } from "wagmi";
-import axios from "axios";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { ContractsContext } from "../../context/Contracts";
 
 type InputValues = {
-  image: File | null;
-  price: number;
+  image: FileList | null;
+  price: string;
   name: string;
   description: string;
 };
 
-const pinataJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIwNjBiNmM2Zi1lNWQ0LTQ0MWMtYmFkMS1jZmM0ZTYwMzJhMmIiLCJlbWFpbCI6ImFybWFuZG8uY3IubXVyaWxsb0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJpZCI6IkZSQTEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX0seyJpZCI6Ik5ZQzEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiOThmMTg0MDQyMWYxY2NkODMxMGUiLCJzY29wZWRLZXlTZWNyZXQiOiI4ZWY2YzJlMTQxYjBmNDZhY2FkYzdkOTY5NTA4OWQxMDhjZDRjZDAzYTcyODA0MzEyZTI0MDhiZTMxYzFkZjRjIiwiaWF0IjoxNzIwMjE2MjI3fQ.UcP1EWKBhFgAF87muzEF_a6i7TWHIFIHqUu3A7_lL8A';
-
 export function Create() {
   const { isConnected } = useAccount();
+  const { register, handleSubmit, formState: { errors } } = useForm<InputValues>();
   const { nftContract, marketPlaceContract } = useContext(ContractsContext);
-  const [inputValues, setInputValues] = useState<InputValues>({
-    image: null,
-    price: 0,
-    name: "",
-    description: "",
-  });
 
-  const uploadToPinata = async (e: ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    if (e.target.files) {
-      const file = e.target.files[0];
-      setInputValues((prev) => ({ ...prev, image: file }));
+  const onSubmit: SubmitHandler<InputValues> = async (data) => {
+    const { image, name, price, description } = data;
+
+    if (!image || !price || !name || !description) {
+      toast.error("All fields are required");
+      return;
+    } else if (Number(price) <= 0) {
+      toast.error("Price must be greater than 0");
+      return;
     }
-  };
 
-  const createNFT = async () => {
-    const { description, image, name, price } = inputValues;
-    if (!image || !price || !description || !name) return;
-    console.log({ description, image, name, price });
     try {
       const formData = new FormData();
-      formData.append('file', image);
-      
+      formData.append('file', image[0]);
+
       const pinataMetadata = JSON.stringify({
         name: name,
         keyvalues: {
-          description: description,
+          description: description
         }
       });
       formData.append('pinataMetadata', pinataMetadata);
 
       const pinataOptions = JSON.stringify({
-        cidVersion: 0,
+        cidVersion: 0
       });
       formData.append('pinataOptions', pinataOptions);
 
@@ -56,32 +50,34 @@ export function Create() {
         maxBodyLength: Infinity,
         headers: {
           'Content-Type': `multipart/form-data`,
-          'Authorization': `Bearer ${pinataJWT}`
+          'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT}`
         }
       });
 
-      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${res.data.IpfsHash}`;
-      mintThenList(ipfsUrl);
+      const cid = res.data.IpfsHash;
+      await mintThenList(cid, price);
     } catch (error) {
-      console.log("ipfs uri upload error:", error);
+      console.log("IPFS URI upload error:", error);
+      toast.error("Failed to upload to Pinata");
     }
   };
 
-  const mintThenList = async (uri: string) => {
-    const { price } = inputValues;
+  const mintThenList = async (cid: string, price: string) => {
     try {
-      await (await nftContract!.mint(uri)).wait();
+      await (await nftContract!.mint(cid)).wait();
       const id = await nftContract!.tokenCount();
       await (await nftContract!.setApprovalForAll(marketPlaceContract!.address, true)).wait();
-      const listingPrice = ethers.utils.parseEther(price.toString());
+      const listingPrice = ethers.utils.parseEther(price);
       await (await marketPlaceContract!.makeItem(nftContract!.address, id, listingPrice)).wait();
+      toast.success("NFT minted and listed successfully");
     } catch (error) {
       console.log("Error minting and listing NFT:", error);
+      toast.error("Failed to mint and list NFT");
     }
   };
 
   return (
-    <section className="w-full px-64 h-screen flex flex-col gap-5 justify-start items-center py-32">
+    <section className="w-full h-screen flex flex-col gap-5 justify-start items-start py-32">
       {!isConnected ? (
         <div className="w-full h-full flex justify-center items-center">
           <p className="text-white text-2xl font-medium">
@@ -89,109 +85,60 @@ export function Create() {
           </p>
         </div>
       ) : (
-        <section className="w-full flex gap-5 justify-start items-start flex-col">
-          <div className="grid w-full max-w-lg items-center gap-1.5">
-            <label className="text-sm text-[#ffffffd7] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Picture
+        <section className="flex flex-col justify-center items-center">
+          <h1 className="text-3xl text-white font-bold self-start">CREATE YOUR NFT</h1>
+          <form
+            className="w-full flex justify-start items-start flex-col"
+            onSubmit={handleSubmit(onSubmit)}
+          >
+            <label htmlFor="picture" className="text-lg text-white font-medium mt-5">
+              Image
             </label>
             <input
-              className="flex w-full rounded-md border border-blue-300 border-input bg-transparent text-md text-[#ffffffd7] file:border-0 file:py-3 file:bg-[rgb(35,34,59)] file:text-white file:text-sm file:font-medium"
+              className="flex min-w-[32rem] rounded-md border border-[#ffffff67] border-input bg-transparent text-md text-[#ffffffd7] file:border-0 file:py-3 file:bg-[#FCD535] file:text-bloack file:text-sm file:font-medium file:cursor-pointer file:hover:bg-[#fcd435d3]"
               type="file"
               id="picture"
-              onChange={uploadToPinata}
+              {...register("image", { required: true })}
             />
-          </div>
-          <div className="grid w-full max-w-lg items-center gap-1.5">
+            {errors.image && <span className="text-red-600 font-normal text-sm mt-1">This field is required</span>}
+            
+            <label htmlFor="name" className="text-lg text-white font-medium mt-5">
+              Name
+            </label>
             <input
-              type="text"
-              className="flex w-full outline-none px-2 py-2 rounded-md border border-blue-300 border-input bg-transparent text-md text-[#ffffffd7] font-medium"
-              onChange={(e) =>
-                setInputValues((prev) => ({ ...prev, name: e.target.value }))
-              }
-              value={inputValues.name}
+              {...register("name", { required: true, maxLength: 20 })}
+              autoComplete="off"
+              className="flex min-w-[32rem] outline-none px-2 py-2 rounded-md border border-[#ffffff67] border-input bg-transparent text-md text-[#ffffffd7] font-medium"
             />
-          </div>
-          <div className="grid w-full max-w-lg items-center gap-1.5">
+            {errors.name && <span className="text-red-600 font-normal text-sm mt-1">This field is required</span>}
+            
+            <label htmlFor="description" className="text-lg text-white font-medium mt-5">
+              Description
+            </label>
             <textarea
-              className="flex w-full outline-none px-2 py-2 rounded-md border border-blue-300 border-input bg-transparent text-md text-[#ffffffd7] font-medium"
-              onChange={(e) =>
-                setInputValues((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-              value={inputValues.description}
-            />
-          </div>
-          <div className="grid w-full max-w-lg items-center gap-1.5">
+              {...register("description", { required: true })}
+              className="flex min-w-[32rem] outline-none px-2 py-2 rounded-md border border-[#ffffff67] border-input bg-transparent text-md text-[#ffffffd7] font-medium"
+            ></textarea>
+            {errors.description && <span className="text-red-600 font-normal text-sm mt-1">This field is required</span>}
+            
+            <label htmlFor="price" className="text-lg text-white font-medium mt-5">
+              Price
+            </label>
             <input
-              type="text"
-              className="flex w-full outline-none px-2 py-2 rounded-md border border-blue-300 border-input bg-transparent text-md text-[#ffffffd7] font-medium"
-              onChange={(e) => {
-                const value = e.target.value;
-                const regex = /^[0-9\b]+$/;
-                if (value === "" || regex.test(value)) {
-                  setInputValues((prev) => ({
-                    ...prev,
-                    price: Number(value),
-                  }));
-                }
-              }}
-              value={inputValues.price}
+              {...register("price", { required: true, min: 0 })}
+              autoComplete="off"
+              className="flex min-w-[32rem] outline-none px-2 py-2 rounded-md border border-[#ffffff67] border-input bg-transparent text-md text-[#ffffffd7] font-medium"
             />
-          </div>
-          <button 
-            type="button" 
-            onClick={createNFT}
-            className="min-w-80 bg-[rgb(35,34,59)] cursor-pointer rounded-md border text-[#ffffff] border-blue-300 py-2 transition-all ease-in hover:bg-[rgb(68,65,114)]"
-          >
-            CREATE AND LIST NFT
-          </button>
+            {errors.price && <span className="text-red-600 font-normal text-sm mt-1">This field is required</span>}
+            
+            <input
+              type="submit"
+              value="Create NFT"
+              className="min-w-80 bg-[#FCD535] font-medium cursor-pointer rounded-md text-black mt-5 py-2 transition-all ease-in hover:bg-[#fcd435d3]"
+            />
+          </form>
         </section>
       )}
     </section>
   );
 }
-
-
-/*
-const axios = require('axios')
-const FormData = require('form-data')
-const fs = require('fs')
-const JWT = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIwNjBiNmM2Zi1lNWQ0LTQ0MWMtYmFkMS1jZmM0ZTYwMzJhMmIiLCJlbWFpbCI6ImFybWFuZG8uY3IubXVyaWxsb0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJpZCI6IkZSQTEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX0seyJpZCI6Ik5ZQzEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiOThmMTg0MDQyMWYxY2NkODMxMGUiLCJzY29wZWRLZXlTZWNyZXQiOiI4ZWY2YzJlMTQxYjBmNDZhY2FkYzdkOTY5NTA4OWQxMDhjZDRjZDAzYTcyODA0MzEyZTI0MDhiZTMxYzFkZjRjIiwiaWF0IjoxNzIwMjE2MjI3fQ.UcP1EWKBhFgAF87muzEF_a6i7TWHIFIHqUu3A7_lL8A
-
-const pinFileToIPFS = async () => {
-    const formData = new FormData();
-    const src = "path/to/file.png";
-
-    const file = fs.createReadStream(src)
-    formData.append('file', file)
-
-    const pinataMetadata = JSON.stringify({
-      name: 'File name',
-    });
-    formData.append('pinataMetadata', pinataMetadata);
-
-    const pinataOptions = JSON.stringify({
-      cidVersion: 0,
-    })
-    formData.append('pinataOptions', pinataOptions);
-
-    try{
-      const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
-        maxBodyLength: "Infinity",
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
-          'Authorization': `Bearer ${JWT}`
-        }
-      });
-      console.log(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-}
-pinFileToIPFS()
-
-// Gateway URL: https://purple-mad-salmon-62.mypinata.cloud
-
-*/

@@ -15,8 +15,8 @@ export const Navigation = () => {
     return (
         <Suspense>
             <BrowserRouter>
-                <div className="flex flex-col">
-                    <nav className='w-full px-64 font-medium text-xl text-white fixed border-b border-[rgba(102,102,102,0.49)] flex justify-between items-center h-16 py-3 px-10'>
+                <div className="flex flex-col items-center">
+                    <nav className='w-full font-medium text-xl text-white fixed border-b border-[rgba(102,102,102,0.49)] flex justify-between items-center h-16 py-3 px-32'>
                         <ul className='flex justify-center items-center gap-5'>
                             {
                                 routes.map(({ to, name }) => (
