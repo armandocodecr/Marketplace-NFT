@@ -66,3 +66,6 @@ The Marketplace contract manages the creation and purchase of items (NFTs) in th
 
 ## NFT.sol
 The NFT contract manages the minting of new NFTs. Details of the contract can be found in the NFT.sol file.
+
+## Video Demonstration
+For a detailed walkthrough of the project, please refer to the following video: [Demo video](https://www.youtube.com/watch?v=4DNIQTnrJjA)
