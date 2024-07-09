@@ -1,6 +1,5 @@
 import { FC, useEffect, useState } from 'react'
 import { ethers } from "ethers";
-import { useAccount } from 'wagmi'
 import { ContractsContext } from './ContractsContext'
 import { useConnect } from '../../hooks';
 
@@ -18,7 +17,6 @@ export const ContractsProvider: FC<Props> = ({ children }) => {
     const [marketPlaceContract, setMarketPlaceContract] = useState<ethers.Contract | null>(null)
     const [nftContract, setNftContract] = useState<ethers.Contract | null>(null)
 
-    const { isConnected } = useAccount()
     const { useEthersSigner } = useConnect()
     
     const provider = useEthersSigner();
