@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract Marketplace is ReentrancyGuard {
 
     address payable public immutable feeAccount;
-    uint public immutable feePercent; // Porcentaje de la vente que se llevará el owner
+    uint public immutable feePercent; // Percentage of the sale to be taken by the owner
     uint public itemCount;
 
     struct Item {
@@ -51,7 +51,7 @@ contract Marketplace is ReentrancyGuard {
             _nft,
             _tokenId,
             _price,
-            payable(msg.sender), // se coloca "payable" porque la persona que crea el item podrá recibir pagos
+            payable(msg.sender), // payable" is set because the person who creates the item will be able to receive payments.
             false
         );
         emit Offered(itemCount, address(_nft), _tokenId, _price, msg.sender);
